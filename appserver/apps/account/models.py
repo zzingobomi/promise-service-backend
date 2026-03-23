@@ -1,6 +1,8 @@
+import random
+import string
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-from pydantic import AwareDatetime, EmailStr
+from typing import TYPE_CHECKING, Union
+from pydantic import AwareDatetime, EmailStr, model_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship, func
 from sqlalchemy_utc import UtcDateTime
@@ -14,14 +16,16 @@ class User(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("email", name="uq_email"),)
 
     id: int = Field(default=None, primary_key=True)
-    username: str = Field(max_length=40, description="사용자 계정 ID")
+    username: str = Field(min_length=4, max_length=40, description="사용자 계정 ID")
     email: EmailStr = Field(unique=True, max_length=128, description="사용자 이메일")
-    display_name: str = Field(max_length=40, description="사용자 표시 이름")
-    password: str = Field(max_length=128, description="사용자 비밀번호")
+    display_name: str = Field(
+        min_length=4, max_length=40, description="사용자 표시 이름"
+    )
+    password: str = Field(min_length=8, max_length=128, description="사용자 비밀번호")
     is_host: bool = Field(default=False, description="사용자가 호스트인지 여부")
 
     oauth_accounts: list["OAuthAccount"] = Relationship(back_populates="user")
-    calendar: "Calendar" = Relationship(
+    calendar: Union["Calendar", None] = Relationship(
         back_populates="host",
         sa_relationship_kwargs={"uselist": False, "single_parent": True},
     )
@@ -44,6 +48,15 @@ class User(SQLModel, table=True):
             "onupdate": lambda: datetime.now(timezone.utc),
         },
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_display_name(cls, data: dict) -> dict:
+        if not data.get("display_name"):
+            data["display_name"] = "".join(
+                random.choices(string.ascii_letters + string.digits, k=8)
+            )
+        return data
 
 
 class OAuthAccount(SQLModel, table=True):

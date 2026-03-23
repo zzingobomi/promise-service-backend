@@ -1,4 +1,5 @@
 {
+  "terminal.integrated.fontFamily": "MesloLGS NF",
   "python.formatting.provider": "none",
   "editor.defaultFormatter": "ms-python.black-formatter",
   "editor.formatOnSave": true,
